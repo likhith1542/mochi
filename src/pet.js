@@ -190,6 +190,16 @@ const SPECIES = {
   ghost: GHOST_SPECIES,
 };
 
+// Prop animations the pet can perform (per-reminder or while idle).
+export const ANIMS = [
+  { id: 'drink', emoji: '🚰', label: 'Drink water' },
+  { id: 'stand', emoji: '🧍', label: 'Stand tall' },
+  { id: 'read', emoji: '📖', label: 'Read a book' },
+  { id: 'music', emoji: '🎧', label: 'Listen to music' },
+  { id: 'type', emoji: '⌨️', label: 'Type away' },
+];
+const ANIM_IDS = new Set(ANIMS.map((a) => a.id));
+
 export const SPECIES_INFO = [
   { id: 'cat', label: 'Cat' },
   { id: 'pup', label: 'Puppy' },
@@ -323,8 +333,26 @@ export class Pet {
     this.cursor = { x: -1e4, y: -1e4 };
     this.cursorIdleMs = 0;
     this.visiting = false;
+    this.acting = null;
+    this.idleAnim = 'stand';
+    this.rhythmAt = 0;
 
     this.setSkin(skinId);
+  }
+
+  setIdleAnim(name) {
+    this.idleAnim = ANIM_IDS.has(name) ? name : null;
+  }
+
+  startAct(name, durMs = 0) {
+    if (!ANIM_IDS.has(name)) return;
+    this.acting = { name, until: durMs ? this.t + durMs / 1000 : Infinity };
+    this.rhythmAt = 0;
+    this.wake();
+  }
+
+  stopAct() {
+    this.acting = null;
   }
 
   setSkin(id) {
@@ -424,6 +452,8 @@ export class Pet {
       this.walkUntil = this.t + 1.2 + Math.random() * 2.5;
     } else if (r < 0.68 && this.t - this.lastSleep > 45) {
       this.forceSleep();
+    } else if (r < 0.8 && this.idleAnim) {
+      this.startAct(this.idleAnim, 8000 + Math.random() * 8000);
     } else {
       this.decideAt = this.t + 2 + Math.random() * 4;
     }
@@ -465,7 +495,31 @@ export class Pet {
         this.setState('idle');
         this.decideAt = this.t + 1 + Math.random() * 2;
       }
-      if (this.alert) {
+      if (this.acting) {
+        if (this.t > this.acting.until) {
+          this.acting = null;
+          this.decideAt = this.t + 1 + Math.random() * 2;
+        } else {
+          if (this.state !== 'idle') this.setState('idle');
+          this.decideAt = this.t + 2;
+          const a = this.acting.name;
+          if (a === 'music' && this.t > this.rhythmAt) {
+            this.spawn(Math.random() < 0.5 ? '♪' : '♫', '#7d6bb5', 30);
+            this.rhythmAt = this.t + 0.8 + Math.random() * 0.5;
+          } else if (a === 'drink' && this.t > this.rhythmAt) {
+            this.spawn('💧', '#7fc4e0', 16);
+            this.rhythmAt = this.t + 1.9;
+          } else if (a === 'stand' && this.t > this.rhythmAt) {
+            this.spawn('✦', '#e8b64c', 34);
+            this.rhythmAt = this.t + 2.2;
+          }
+          if (this.alert && this.t > this.hopAt) {
+            this.spawn('!', '#e07a2f', 10);
+            this.squash = 0.12;
+            this.hopAt = this.t + 2;
+          }
+        }
+      } else if (this.alert) {
         if (this.t > this.hopAt) {
           this.phys.hop(6.5);
           this.spawn('!', '#e07a2f', 10);
@@ -518,6 +572,67 @@ export class Pet {
     this.particles = this.particles.filter((p) => p.age < p.life);
   }
 
+  // Props are drawn in sprite-local space: origin at bottom-center of the
+  // pet, x -40..40, ground at y=0, head top around y=-65.
+  drawProp(g, name) {
+    const k = this.pal.k;
+    if (name === 'drink') {
+      g.fillStyle = '#eaf6fc';
+      g.fillRect(26, -18, 14, 18);
+      g.fillStyle = '#8fd0e8';
+      g.fillRect(26, -11, 14, 11);
+      g.fillStyle = k;
+      g.fillRect(24, -18, 2, 20);
+      g.fillRect(40, -18, 2, 20);
+      g.fillRect(24, 0, 18, 2);
+      g.fillStyle = '#f28482';
+      g.fillRect(34, -30, 3, 14);
+      g.fillRect(31, -33, 6, 3);
+    } else if (name === 'read') {
+      g.fillStyle = '#fffdf6';
+      g.fillRect(-20, -12, 18, 12);
+      g.fillRect(2, -12, 18, 12);
+      g.fillStyle = '#d9c8ae';
+      g.fillRect(-16, -9, 11, 2);
+      g.fillRect(-16, -5, 11, 2);
+      g.fillRect(6, -9, 11, 2);
+      g.fillRect(6, -5, 11, 2);
+      g.fillStyle = k;
+      g.fillRect(-1, -13, 2, 13);
+      g.fillRect(-21, 0, 42, 2);
+      if (this.t % 2.8 < 0.2) {
+        g.fillStyle = '#fffdf6';
+        g.fillRect(0, -20, 10, 12);
+      }
+    } else if (name === 'music') {
+      const c1 = '#5a4a7a';
+      const c2 = '#8d81c9';
+      g.fillStyle = c1;
+      g.fillRect(-34, -74, 68, 5);
+      g.fillRect(-40, -72, 6, 30);
+      g.fillRect(34, -72, 6, 30);
+      g.fillRect(-46, -44, 12, 18);
+      g.fillRect(34, -44, 12, 18);
+      g.fillStyle = c2;
+      g.fillRect(-43, -40, 6, 10);
+      g.fillRect(37, -40, 6, 10);
+    } else if (name === 'type') {
+      g.fillStyle = '#3a4152';
+      g.fillRect(-19, -32, 38, 26);
+      g.fillStyle = '#cfe8ff';
+      g.fillRect(-16, -29, 32, 20);
+      g.fillStyle = '#7fb3e0';
+      const ph = Math.floor(this.t * 2.5) % 3;
+      g.fillRect(-13, -26, 14 + ph * 4, 2);
+      g.fillRect(-13, -22, 20 - ph * 3, 2);
+      g.fillRect(-13, -18, 8 + ph * 5, 2);
+      g.fillStyle = '#9aa0ad';
+      g.fillRect(-22, -6, 44, 6);
+      g.fillStyle = '#6b7280';
+      for (let i = 0; i < 6; i++) g.fillRect(-18 + i * 6, -4, 3, 2);
+    }
+  }
+
   currentFrameKey() {
     let eyes = 'open';
     let feet = 'stand';
@@ -562,12 +677,30 @@ export class Pet {
       bob += Math.sin(this.t * 2.5) * 2.5;
     }
 
+    const act =
+      this.acting && (this.state === 'idle' || this.state === 'perch')
+        ? this.acting.name
+        : null;
+    let tilt = 0;
+    if (act === 'stand') {
+      sy *= 1.05;
+      sx *= 0.97;
+    } else if (act === 'music') {
+      bob += Math.sin(this.t * 5) * 1.5;
+    } else if (act === 'drink') {
+      const ph = (Math.sin(this.t * 2) + 1) / 2;
+      tilt = ph > 0.72 ? 0.13 : 0;
+    } else if (act === 'type') {
+      sx *= 1 + Math.sin(this.t * 18) * 0.008;
+    }
+
     const key = this.currentFrameKey();
     const frame = this.frames[key];
 
     g.save();
     g.translate(x, bottom + bob);
     g.scale(this.facing * sx, sy);
+    if (tilt) g.rotate(tilt);
     g.imageSmoothingEnabled = false;
 
     // tail (behind body)
@@ -595,8 +728,18 @@ export class Pet {
       const dy = this.cursor.y - (bottom - SPR_H / 2);
       const m = Math.hypot(dx, dy) || 1;
       const near = m < 400 ? 1 : 0.3;
-      const ox = Math.max(-2, Math.min(2, (dx / m) * 2.4)) * near * this.facing;
-      const oy = Math.max(-2, Math.min(2, (dy / m) * 2.4)) * near;
+      let ox = Math.max(-2, Math.min(2, (dx / m) * 2.4)) * near * this.facing;
+      let oy = Math.max(-2, Math.min(2, (dy / m) * 2.4)) * near;
+      if (act === 'read' || act === 'type') {
+        ox = 0;
+        oy = 2.6;
+      } else if (act === 'drink') {
+        ox = 2.2;
+        oy = 1.4;
+      } else if (act === 'stand') {
+        ox = 0;
+        oy = 0;
+      }
       g.fillStyle = '#2f2724';
       const pw = key.startsWith('wide') ? 5 : 4;
       const eyeL = this.species.eyeL;
@@ -604,6 +747,7 @@ export class Pet {
       g.fillRect(-SPR_W / 2 + eyeL.x - pw / 2 + ox, -SPR_H + eyeL.y - pw / 2 + oy, pw, pw);
       g.fillRect(-SPR_W / 2 + eyeR.x - pw / 2 + ox, -SPR_H + eyeR.y - pw / 2 + oy, pw, pw);
     }
+    if (act) this.drawProp(g, act);
     g.restore();
 
     // particles in world space

@@ -1,10 +1,14 @@
 const LS_KEY = 'pet.reminders.v1';
 
 const DEFAULTS = [
-  { id: 'water', emoji: '💧', label: 'Time for a sip of water', mins: 60, enabled: true },
-  { id: 'eyes', emoji: '👀', label: '20-20-20: look at something far away', mins: 20, enabled: true },
-  { id: 'stretch', emoji: '🙆', label: 'Stand up and stretch a bit', mins: 45, enabled: true },
+  { id: 'water', emoji: '💧', label: 'Time for a sip of water', mins: 60, enabled: true, anim: 'drink' },
+  { id: 'eyes', emoji: '👀', label: '20-20-20: look at something far away', mins: 20, enabled: true, anim: 'stand' },
+  { id: 'stretch', emoji: '🙆', label: 'Stand up and stretch a bit', mins: 45, enabled: true, anim: 'stand' },
 ];
+
+// anim values: '' = use the global default, 'none' = no animation,
+// otherwise an id from ANIMS in pet.js.
+const DEFAULT_ANIMS = { water: 'drink', eyes: 'stand', stretch: 'stand' };
 
 export class Reminders {
   constructor(onDue) {
@@ -20,8 +24,19 @@ export class Reminders {
       const now = Date.now();
       items = DEFAULTS.map((d) => ({ ...d, nextAt: now + d.mins * 60e3 }));
     }
+    for (const r of items) {
+      if (r.anim === undefined) r.anim = DEFAULT_ANIMS[r.id] ?? '';
+    }
     this.items = items;
     this.save();
+  }
+
+  setAnim(id, anim) {
+    const r = this.items.find((r) => r.id === id);
+    if (r) {
+      r.anim = anim;
+      this.save();
+    }
   }
 
   save() {
@@ -76,7 +91,7 @@ export class Reminders {
     this.save();
   }
 
-  add(label, mins, emoji = '⏰', once = false) {
+  add(label, mins, emoji = '⏰', once = false, anim = '') {
     mins = Math.max(1, Math.floor(mins) || 30);
     this.items.push({
       id: 'r' + Date.now().toString(36),
@@ -84,6 +99,7 @@ export class Reminders {
       label,
       mins,
       once,
+      anim,
       enabled: true,
       nextAt: Date.now() + mins * 60e3,
     });

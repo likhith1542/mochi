@@ -3,7 +3,8 @@ import { getCurrentWindow, primaryMonitor } from '@tauri-apps/api/window';
 import { PhysicalPosition, PhysicalSize } from '@tauri-apps/api/dpi';
 import { enable as autostartEnable, disable as autostartDisable, isEnabled as autostartIsEnabled } from '@tauri-apps/plugin-autostart';
 import { createPhysics } from './physics.js';
-import { Pet, PETS, VARIANTS, SPECIES_INFO, LEGACY_IDS, petThumb } from './pet.js';
+import pkg from '../package.json';
+import { Pet, PETS, VARIANTS, SPECIES_INFO, LEGACY_IDS, ANIMS, petThumb } from './pet.js';
 import { Reminders, fmtIn } from './reminders.js';
 import { CalendarSync } from './calendar.js';
 import { sfx, isMuted, setMuted } from './sound.js';
@@ -334,7 +335,20 @@ const CHIP_MINS = [15, 30, 45, 60, 120];
 
 let addOpen = false;
 let addOnce = false;
+let addAnim = '';
 let selEmoji = '⏰';
+let menuTab = 'rem';
+
+const ANIM_CYCLE = ['', ...ANIMS.map((a) => a.id), 'none'];
+const animEmoji = (id) =>
+  id === 'none' ? '🚫' : ANIMS.find((a) => a.id === id)?.emoji || '⭐';
+const animLabel = (id) =>
+  id === 'none' ? 'No animation' : ANIMS.find((a) => a.id === id)?.label || 'Default animation';
+
+const VALID_ANIMDEF = new Set(['none', ...ANIMS.map((a) => a.id)]);
+let petAnimDefault = VALID_ANIMDEF.has(localStorage.getItem('pet.animdef'))
+  ? localStorage.getItem('pet.animdef')
+  : 'stand';
 
 const cal = new CalendarSync();
 let calOpen = false;
@@ -373,6 +387,7 @@ function renderMenu() {
       </div>
       <span class="rem-due"></span>
       <span class="rem-actions">
+        <button class="icon" data-act="anim-cycle" title="Animation: ${animLabel(r.anim || '')}">${animEmoji(r.anim || '')}</button>
         <button class="icon" data-act="ring" title="Ring now">${ICONS.bell}</button>
         <button class="icon danger" data-act="del" title="Delete">${ICONS.trash}</button>
       </span>
@@ -391,6 +406,13 @@ function renderMenu() {
       <div class="mode-row">
         <button class="chip mode-chip ${addOnce ? '' : 'sel'}" data-act="mode" data-mode="repeat">🔁 Repeats</button>
         <button class="chip mode-chip ${addOnce ? 'sel' : ''}" data-act="mode" data-mode="once">⏱ Once</button>
+      </div>
+      <div class="anim-row">
+        <button class="chip anim-chip ${addAnim === '' ? 'sel' : ''}" data-act="anim" data-anim="" title="Default animation">⭐</button>
+        ${ANIMS.map(
+          (a) => `<button class="chip anim-chip ${addAnim === a.id ? 'sel' : ''}" data-act="anim" data-anim="${a.id}" title="${a.label}">${a.emoji}</button>`
+        ).join('')}
+        <button class="chip anim-chip ${addAnim === 'none' ? 'sel' : ''}" data-act="anim" data-anim="none" title="No animation">🚫</button>
       </div>
       <div class="mins-row">
         ${CHIP_MINS.map(
@@ -449,38 +471,61 @@ function renderMenu() {
     </div>`;
       })();
 
-  menuEl.innerHTML = `
-    <div class="m-head">
-      <div>
-        <div class="m-title">🐾 ${esc(petName())}</div>
-        <div class="m-sub">your gentle reminders</div>
-      </div>
-      <button class="icon" data-act="close" title="Close">${ICONS.x}</button>
-    </div>
+  const tabRem = `
     <div class="rem-list">${rows || '<div class="empty">No reminders yet — add one below 🐾</div>'}</div>
     ${addForm}
-    ${calSec}
-    <div class="pet-sec">
-      <input type="text" id="pet-name" value="${esc(petName())}" maxlength="14" title="Pet name" />
-      <div class="skin-dots">
-        ${SPECIES_INFO.map((s) => {
-          const cur = PETS[skinId].species === s.id;
-          const rep = cur ? skinId : `${s.id}.${VARIANTS[s.id][0].id}`;
-          return `<button class="dot ${cur ? 'sel' : ''}" data-act="species" data-species="${s.id}" title="${s.label}"><img src="${petThumb(rep)}" alt="${s.label}" /></button>`;
-        }).join('')}
-      </div>
-      <div class="variant-dots">
-        ${VARIANTS[PETS[skinId].species]
-          .map((v) => {
-            const id = `${PETS[skinId].species}.${v.id}`;
-            return `<button class="vdot ${id === skinId ? 'sel' : ''}" data-act="skin" data-skin="${id}" style="background:${v.pal.o}" title="${v.name}"></button>`;
-          })
-          .join('')}
-      </div>
+    ${calSec}`;
+
+  const tabPet = `
+    <div class="fieldlabel">Name</div>
+    <input type="text" id="pet-name" value="${esc(petName())}" maxlength="14" title="Pet name" />
+    <div class="fieldlabel">Species</div>
+    <div class="skin-dots">
+      ${SPECIES_INFO.map((s) => {
+        const cur = PETS[skinId].species === s.id;
+        const rep = cur ? skinId : `${s.id}.${VARIANTS[s.id][0].id}`;
+        return `<button class="dot ${cur ? 'sel' : ''}" data-act="species" data-species="${s.id}" title="${s.label}"><img src="${petThumb(rep)}" alt="${s.label}" /></button>`;
+      }).join('')}
     </div>
+    <div class="fieldlabel">Color</div>
+    <div class="variant-dots">
+      ${VARIANTS[PETS[skinId].species]
+        .map((v) => {
+          const id = `${PETS[skinId].species}.${v.id}`;
+          return `<button class="vdot ${id === skinId ? 'sel' : ''}" data-act="skin" data-skin="${id}" style="background:${v.pal.o}" title="${v.name}"></button>`;
+        })
+        .join('')}
+    </div>
+    <div class="fieldlabel">Perform an animation</div>
+    <div class="anim-def">
+      ${ANIMS.map(
+        (a) => `<button class="chip anim-chip ${pet && pet.acting && pet.acting.name === a.id ? 'sel' : ''}" data-act="animplay" data-anim="${a.id}" title="${a.label} — click again to stop">${a.emoji}</button>`
+      ).join('')}
+    </div>`;
+
+  const tabSet = `
     <div class="set-row"><span>🔊 Sounds</span><button class="switch ${isMuted() ? '' : 'on'}" data-act="mute"></button></div>
     <div class="set-row"><span>🪟 Sit on windows</span><button class="switch ${sitOnWindows ? 'on' : ''}" data-act="sitwin"></button></div>
     <div class="set-row"><span>🚀 Launch at login</span><button class="switch ${autostartOn ? 'on' : ''}" data-act="autostart"></button></div>
+    <div class="about">Mochi v${pkg.version} · made with 🧡</div>`;
+
+  menuEl.innerHTML = `
+    <div class="m-head">
+      <div class="m-id">
+        <span class="m-thumb"><img src="${petThumb(skinId, 24)}" alt="" /></span>
+        <div>
+          <div class="m-title">${esc(petName())}</div>
+          <div class="m-sub">your desk buddy</div>
+        </div>
+      </div>
+      <button class="icon" data-act="close" title="Close">${ICONS.x}</button>
+    </div>
+    <div class="tabs">
+      <button class="tab ${menuTab === 'rem' ? 'sel' : ''}" data-act="tab" data-tab="rem">⏰ Reminders</button>
+      <button class="tab ${menuTab === 'pet' ? 'sel' : ''}" data-act="tab" data-tab="pet">🐾 Pet</button>
+      <button class="tab ${menuTab === 'set' ? 'sel' : ''}" data-act="tab" data-tab="set">⚙️ More</button>
+    </div>
+    ${menuTab === 'rem' ? tabRem : menuTab === 'pet' ? tabPet : tabSet}
     <div class="foot">
       ${phys.isPinned() ? '<button class="ghost" data-act="drop">🍃 Let go</button>' : '<button class="ghost" data-act="nap">💤 Nap</button>'}
       <button class="ghost quit" data-act="quit">Quit</button>
@@ -503,6 +548,11 @@ function updateMenuTimes() {
     bar.style.width =
       (r.enabled ? Math.max(0, Math.min(100, 100 * (1 - rem / (r.mins * 60e3)))) : 0) + '%';
   }
+  // keep the "perform" chips in sync with what she's actually doing
+  const actingName = pet && pet.acting ? pet.acting.name : null;
+  for (const b of menuEl.querySelectorAll('[data-act="animplay"]')) {
+    b.classList.toggle('sel', b.dataset.anim === actingName);
+  }
 }
 
 function applySkin(id) {
@@ -524,9 +574,10 @@ function doAdd() {
     setTimeout(() => labelInput.classList.remove('err'), 900);
     return;
   }
-  reminders.add(label, mins, selEmoji, addOnce);
+  reminders.add(label, mins, selEmoji, addOnce, addAnim);
   addOpen = false;
   addOnce = false;
+  addAnim = '';
   renderMenu();
 }
 
@@ -535,7 +586,10 @@ menuEl.addEventListener('click', (e) => {
   if (!btn) return;
   const act = btn.dataset.act;
   const id = btn.closest('[data-id]')?.dataset.id;
-  if (act === 'ring' && id) {
+  if (act === 'tab') {
+    menuTab = btn.dataset.tab;
+    renderMenu();
+  } else if (act === 'ring' && id) {
     reminders.ringNow(id);
     reminders.tick(Date.now());
     closeMenu();
@@ -566,6 +620,26 @@ menuEl.addEventListener('click', (e) => {
     addOnce = btn.dataset.mode === 'once';
     for (const b of menuEl.querySelectorAll('.mode-chip')) {
       b.classList.toggle('sel', b === btn);
+    }
+  } else if (act === 'anim') {
+    addAnim = btn.dataset.anim;
+    for (const b of menuEl.querySelectorAll('[data-act="anim"]')) {
+      b.classList.toggle('sel', b === btn);
+    }
+  } else if (act === 'anim-cycle' && id) {
+    const r = reminders.items.find((x) => x.id === id);
+    if (r) {
+      const next = ANIM_CYCLE[(ANIM_CYCLE.indexOf(r.anim || '') + 1) % ANIM_CYCLE.length];
+      reminders.setAnim(id, next);
+      btn.innerHTML = animEmoji(next);
+      btn.title = `Animation: ${animLabel(next)}`;
+    }
+  } else if (act === 'animplay') {
+    const a = btn.dataset.anim;
+    if (pet.acting && pet.acting.name === a) pet.stopAct();
+    else pet.startAct(a);
+    for (const b of menuEl.querySelectorAll('[data-act="animplay"]')) {
+      b.classList.toggle('sel', !!pet.acting && b.dataset.anim === pet.acting.name);
     }
   } else if (act === 'add') {
     doAdd();
@@ -664,7 +738,7 @@ menuEl.addEventListener('change', (e) => {
   savePetNames();
   e.target.value = petName();
   const title = menuEl.querySelector('.m-title');
-  if (title) title.textContent = `🐾 ${petName()}`;
+  if (title) title.textContent = petName();
 });
 
 const menuAnchor = { x: 0, y: 0 };
@@ -711,6 +785,8 @@ function closeMenu() {
 
 function onDue(r) {
   pet.setAlert(true);
+  const animId = r.anim && r.anim !== '' ? r.anim : petAnimDefault;
+  if (animId && animId !== 'none') pet.startAct(animId);
   sfx.chirp();
   showBubble(r.label, [
     {
@@ -718,6 +794,7 @@ function onDue(r) {
       cb() {
         reminders.done();
         pet.setAlert(false);
+        pet.stopAct();
         hideBubble();
         pet.celebrate();
         sfx.ding();
@@ -729,6 +806,7 @@ function onDue(r) {
       cb() {
         reminders.snooze(5);
         pet.setAlert(false);
+        pet.stopAct();
         hideBubble();
       },
     },
@@ -825,6 +903,7 @@ function frame(now) {
     right: view.right,
   });
   pet = new Pet(phys, { W: view.right, H: view.bottom, left: view.left }, skinId);
+  pet.setIdleAnim(petAnimDefault === 'none' ? null : petAnimDefault);
   restorePin();
   reminders = new Reminders(onDue);
   autostartIsEnabled()

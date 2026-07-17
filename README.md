@@ -39,6 +39,7 @@ This creates a **draft** release with all artifacts — review it, then publish.
 | Drop her onto your focused window | She sits on its top edge, walks along it, falls off the end (toggle: 🪟 Sit on windows) |
 | One-shot reminders | Add form → **⏱ Once**: "remind me in N minutes", fires once, deletes itself |
 | Calendar sync | Menu → **📅 Sync with calendar**: paste your Google/Apple private iCal link; she alerts you 2–15 min before each event. Syncs every 5 min, on menu open, and via the 🔄 button |
+| Animations | 🚰 drink · 🧍 stand · 📖 read · 🎧 music · ⌨️ type — pick one per reminder (she demos it when the reminder fires), play on demand from the Pet tab, and she performs them on her own while idle |
 | Leave your cursor still | She sometimes wanders over to sit next to it |
 | Rename / swap pets | Right-click → name field, species picker (cat, puppy, bunny, bird, ghost), and color variants per species — 21 pets in all, each with its own default name |
 | Sounds & launch at login | Toggles in the right-click menu |
