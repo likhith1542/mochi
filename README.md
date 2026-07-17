@@ -36,6 +36,8 @@ This creates a **draft** release with all artifacts — review it, then publish.
 | Right-click → 🍃 Let go | Unpin her so she falls back to the floor |
 | Right-click her | Reminder menu: ring now, pause, delete, add new, nap, quit |
 | Reminder due | She hops with a speech bubble (and a soft chirp) — **Done ✓** or **Snooze 5m** |
+| Drop her onto your focused window | She sits on its top edge, walks along it, falls off the end (toggle: 🪟 Sit on windows) |
+| One-shot reminders | Add form → **⏱ Once**: "remind me in N minutes", fires once, deletes itself |
 | Leave your cursor still | She sometimes wanders over to sit next to it |
 | Rename / swap pets | Right-click → name field, species picker (cat, puppy, bunny, bird, ghost), and color variants per species — 21 pets in all, each with its own default name |
 | Sounds & launch at login | Toggles in the right-click menu |

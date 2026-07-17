@@ -10,13 +10,28 @@ fn cursor_pos(app: tauri::AppHandle) -> Result<(f64, f64), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Bounds of the frontmost window (not ours), in top-left-origin screen
+/// coordinates. The pet uses its top edge as a ledge to sit on.
+#[tauri::command]
+fn active_window_rect() -> Option<(f64, f64, f64, f64)> {
+    let w = active_win_pos_rs::get_active_window().ok()?;
+    if w.process_id == std::process::id() as u64 {
+        return None;
+    }
+    let p = w.position;
+    if p.width < 160.0 || p.height < 100.0 {
+        return None;
+    }
+    Some((p.x, p.y, p.width, p.height))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![cursor_pos])
+        .invoke_handler(tauri::generate_handler![cursor_pos, active_window_rect])
         .setup(|_app| {
             // No Dock icon / app switcher entry on macOS — it's an overlay, not an app window.
             #[cfg(target_os = "macos")]

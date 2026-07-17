@@ -41,7 +41,12 @@ export class Reminders {
 
   done() {
     if (!this.active) return;
-    this.active.nextAt = Date.now() + this.active.mins * 60e3;
+    if (this.active.once) {
+      // one-shot reminders disappear once completed
+      this.items = this.items.filter((r) => r.id !== this.active.id);
+    } else {
+      this.active.nextAt = Date.now() + this.active.mins * 60e3;
+    }
     this.active = null;
     this.save();
   }
@@ -71,13 +76,14 @@ export class Reminders {
     this.save();
   }
 
-  add(label, mins, emoji = '⏰') {
+  add(label, mins, emoji = '⏰', once = false) {
     mins = Math.max(1, Math.floor(mins) || 30);
     this.items.push({
       id: 'r' + Date.now().toString(36),
       emoji,
       label,
       mins,
+      once,
       enabled: true,
       nextAt: Date.now() + mins * 60e3,
     });

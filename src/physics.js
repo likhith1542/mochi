@@ -36,16 +36,67 @@ export function createPhysics(w, h, opts = {}) {
   let pinned = false;
   const baseMass = pet.mass;
 
+  // "Ledge" = the top edge of the frontmost app window, as a one-way
+  // platform: solid only while the pet is coming down onto it from above,
+  // never when thrown from below or being dragged across it. Gated on the
+  // previous frame's position — a falling pet covers tens of px per frame,
+  // so checking the current overlap would let her tunnel straight through.
+  let ledgeBody = null;
+  let ledgeRect = null;
+  let prevBottom = pet.position.y + R;
+
   const api = {
     engine,
     pet,
     R,
     floorY,
     step(dtMs) {
+      if (ledgeBody) {
+        const falling = pet.velocity.y >= -0.5;
+        const wasAbove = prevBottom <= ledgeRect.y + 6;
+        const canLand = !dragC && !pinned && falling && wasAbove;
+        ledgeBody.collisionFilter.mask = canLand ? 0xffffffff : 0;
+      }
       Engine.update(engine, Math.min(dtMs, 33));
+      prevBottom = pet.position.y + R;
     },
+    setLedge(rect) {
+      const changed =
+        !!rect !== !!ledgeRect ||
+        (rect &&
+          ledgeRect &&
+          (Math.abs(rect.x - ledgeRect.x) > 1 ||
+            Math.abs(rect.y - ledgeRect.y) > 1 ||
+            Math.abs(rect.w - ledgeRect.w) > 1));
+      if (!changed) return;
+      if (ledgeBody) {
+        Composite.remove(engine.world, ledgeBody);
+        ledgeBody = null;
+      }
+      ledgeRect = rect ? { ...rect } : null;
+      if (rect) {
+        ledgeBody = Bodies.rectangle(rect.x + rect.w / 2, rect.y + 14, rect.w, 28, {
+          isStatic: true,
+          label: 'ledge',
+        });
+        Composite.add(engine.world, ledgeBody);
+      }
+    },
+    getLedge: () => ledgeRect,
     grounded() {
-      return pet.position.y + R >= floorY - 3 && Math.abs(pet.velocity.y) < 1.5;
+      if (Math.abs(pet.velocity.y) >= 1.5) return false;
+      const bottom = pet.position.y + R;
+      if (bottom >= floorY - 3) return true;
+      if (
+        ledgeRect &&
+        bottom >= ledgeRect.y - 6 &&
+        bottom <= ledgeRect.y + 8 &&
+        pet.position.x > ledgeRect.x - R / 2 &&
+        pet.position.x < ledgeRect.x + ledgeRect.w + R / 2
+      ) {
+        return true;
+      }
+      return false;
     },
     startDrag(x, y) {
       api.endDrag();

@@ -461,6 +461,17 @@ input[type="number"]::-webkit-outer-spin-button {
   width: 100%;
 }
 
+.mode-row {
+  display: flex;
+  gap: 4px;
+}
+
+.mode-chip.sel {
+  background: var(--orange);
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
 .mins-row {
   display: flex;
   align-items: center;

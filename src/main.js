@@ -32,6 +32,7 @@ let interactive = false; // whether the window currently accepts mouse events
 const storedSkin = localStorage.getItem('pet.skin');
 let skinId = PETS[storedSkin] ? storedSkin : LEGACY_IDS[storedSkin] || 'cat.orange';
 localStorage.setItem('pet.skin', skinId);
+let sitOnWindows = localStorage.getItem('pet.sitwin') !== '0';
 
 // Each pet keeps its own name; unnamed pets use their variant's default.
 let petNames = {};
@@ -143,6 +144,30 @@ async function pollLoop() {
   }
 }
 
+// ---------- active-window ledge: the pet can sit on the frontmost window ----------
+
+async function ledgeLoop() {
+  for (;;) {
+    try {
+      let rect = null;
+      if (sitOnWindows) {
+        const r = await invoke('active_window_rect');
+        if (r) {
+          // logical global coords → window-local CSS px
+          const x = r[0] - winPos.x / scale;
+          const y = r[1] - winPos.y / scale;
+          // ignore tops that are basically at the floor or off the top edge
+          if (y > view.top + 30 && y < view.bottom - 60) rect = { x, y, w: r[2] };
+        }
+      }
+      phys.setLedge(rect);
+    } catch {
+      /* command unavailable on this platform — no ledge */
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+}
+
 // ---------- mouse interaction (only fires while interactive) ----------
 
 // Placement: release the pet gently anywhere above the floor and she stays
@@ -223,8 +248,19 @@ window.addEventListener('mouseup', (e) => {
   }
   const v = phys.pet.velocity;
   const speed = Math.hypot(v.x, v.y);
-  const nearFloor = phys.pet.position.y + phys.R > phys.floorY - 70;
-  if (speed < 4.5 && !nearFloor) {
+  const p = phys.pet.position;
+  const nearFloor = p.y + phys.R > phys.floorY - 70;
+  // Released gently above the frontmost window's top edge? Let her drop
+  // onto the window instead of pinning in mid-air. Pinning above a window
+  // still works, but only from well above it (> 320px).
+  const lr = phys.getLedge();
+  const overLedge =
+    lr &&
+    p.x > lr.x &&
+    p.x < lr.x + lr.w &&
+    lr.y - (p.y + phys.R) > -10 &&
+    lr.y - (p.y + phys.R) < 320;
+  if (speed < 4.5 && !nearFloor && !overLedge) {
     phys.pin();
     savePin();
   } else {
@@ -294,6 +330,7 @@ const EMOJIS = ['⏰', '💧', '👀', '🙆', '🧘', '☕', '💊', '🍎'];
 const CHIP_MINS = [15, 30, 45, 60, 120];
 
 let addOpen = false;
+let addOnce = false;
 let selEmoji = '⏰';
 
 function fmtEvery(mins) {
@@ -311,7 +348,7 @@ function renderMenu() {
       <div class="rem-emoji">${r.emoji}</div>
       <div class="rem-main">
         <div class="rem-label" title="${esc(r.label)}">${esc(r.label)}</div>
-        <div class="rem-sub">every ${fmtEvery(r.mins)}</div>
+        <div class="rem-sub">${r.once ? '⏱ one-time' : `every ${fmtEvery(r.mins)}`}</div>
         <div class="rem-bar"><i></i></div>
       </div>
       <span class="rem-due"></span>
@@ -331,6 +368,10 @@ function renderMenu() {
         (e) => `<button class="emoji-btn ${e === selEmoji ? 'sel' : ''}" data-act="emoji" data-emoji="${e}">${e}</button>`
       ).join('')}</div>
       <input type="text" id="add-label" placeholder="Remind me to…" maxlength="60" autocomplete="off" />
+      <div class="mode-row">
+        <button class="chip mode-chip ${addOnce ? '' : 'sel'}" data-act="mode" data-mode="repeat">🔁 Repeats</button>
+        <button class="chip mode-chip ${addOnce ? 'sel' : ''}" data-act="mode" data-mode="once">⏱ Once</button>
+      </div>
       <div class="mins-row">
         ${CHIP_MINS.map(
           (m) => `<button class="chip ${m === 30 ? 'sel' : ''}" data-act="chip" data-mins="${m}">${m < 60 ? m + 'm' : m / 60 + 'h'}</button>`
@@ -374,6 +415,7 @@ function renderMenu() {
       </div>
     </div>
     <div class="set-row"><span>🔊 Sounds</span><button class="switch ${isMuted() ? '' : 'on'}" data-act="mute"></button></div>
+    <div class="set-row"><span>🪟 Sit on windows</span><button class="switch ${sitOnWindows ? 'on' : ''}" data-act="sitwin"></button></div>
     <div class="set-row"><span>🚀 Launch at login</span><button class="switch ${autostartOn ? 'on' : ''}" data-act="autostart"></button></div>
     <div class="foot">
       ${phys.isPinned() ? '<button class="ghost" data-act="drop">🍃 Let go</button>' : '<button class="ghost" data-act="nap">💤 Nap</button>'}
@@ -418,8 +460,9 @@ function doAdd() {
     setTimeout(() => labelInput.classList.remove('err'), 900);
     return;
   }
-  reminders.add(label, mins, selEmoji);
+  reminders.add(label, mins, selEmoji, addOnce);
   addOpen = false;
+  addOnce = false;
   renderMenu();
 }
 
@@ -452,7 +495,12 @@ menuEl.addEventListener('click', (e) => {
     }
   } else if (act === 'chip') {
     menuEl.querySelector('#add-mins').value = btn.dataset.mins;
-    for (const b of menuEl.querySelectorAll('.chip')) {
+    for (const b of menuEl.querySelectorAll('.chip:not(.mode-chip)')) {
+      b.classList.toggle('sel', b === btn);
+    }
+  } else if (act === 'mode') {
+    addOnce = btn.dataset.mode === 'once';
+    for (const b of menuEl.querySelectorAll('.mode-chip')) {
       b.classList.toggle('sel', b === btn);
     }
   } else if (act === 'add') {
@@ -465,6 +513,10 @@ menuEl.addEventListener('click', (e) => {
   } else if (act === 'mute') {
     setMuted(!isMuted());
     if (!isMuted()) sfx.ding();
+    renderMenu();
+  } else if (act === 'sitwin') {
+    sitOnWindows = !sitOnWindows;
+    localStorage.setItem('pet.sitwin', sitOnWindows ? '1' : '0');
     renderMenu();
   } else if (act === 'autostart') {
     (autostartOn ? autostartDisable() : autostartEnable())
@@ -639,6 +691,7 @@ function frame(now) {
     .then((v) => (autostartOn = v))
     .catch(() => {});
   pollLoop();
+  ledgeLoop();
   requestAnimationFrame(frame);
   maybeWelcome();
 })().catch((err) => console.error('pet boot failed:', err));
