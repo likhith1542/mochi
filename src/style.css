@@ -466,6 +466,41 @@ input[type="number"]::-webkit-outer-spin-button {
   gap: 4px;
 }
 
+.cal-help {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--sub);
+  background: #fff;
+  border: 1px dashed var(--tan);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.cal-row {
+  margin-top: 8px;
+  border-top: 1.5px dashed var(--tan);
+  padding-top: 10px;
+  border-radius: 0;
+}
+
+.cal-row:hover {
+  background: transparent;
+}
+
+.cal-row .cal-actions {
+  display: flex;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.icon.spin svg {
+  animation: spin 0.8s linear infinite;
+}
+
 .mode-chip.sel {
   background: var(--orange);
   border-color: var(--ink);

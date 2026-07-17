@@ -5,6 +5,7 @@ import { enable as autostartEnable, disable as autostartDisable, isEnabled as au
 import { createPhysics } from './physics.js';
 import { Pet, PETS, VARIANTS, SPECIES_INFO, LEGACY_IDS, petThumb } from './pet.js';
 import { Reminders, fmtIn } from './reminders.js';
+import { CalendarSync } from './calendar.js';
 import { sfx, isMuted, setMuted } from './sound.js';
 
 const win = getCurrentWindow();
@@ -324,6 +325,8 @@ const ICONS = {
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  refresh:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
 };
 
 const EMOJIS = ['⏰', '💧', '👀', '🙆', '🧘', '☕', '💊', '🍎'];
@@ -332,6 +335,23 @@ const CHIP_MINS = [15, 30, 45, 60, 120];
 let addOpen = false;
 let addOnce = false;
 let selEmoji = '⏰';
+
+const cal = new CalendarSync();
+let calOpen = false;
+let calProv = 'google';
+let calLead = 5;
+let calBubble = false;
+
+function fmtClock(ms) {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+const CAL_HELP = {
+  google:
+    'Google Calendar → ⚙ Settings → your calendar → <b>Integrate calendar</b> → copy the <b>Secret address in iCal format</b>.',
+  apple:
+    'Calendar.app → right-click your iCloud calendar → <b>Sharing…</b> → tick <b>Public Calendar</b> → copy the webcal:// link.',
+};
 
 function fmtEvery(mins) {
   if (mins < 60) return `${mins}m`;
@@ -386,6 +406,49 @@ function renderMenu() {
     </div>`
     : '<button class="add-open" data-act="open-add">＋ New reminder</button>';
 
+  const calSec = !cal.configured()
+    ? calOpen
+      ? `
+    <div class="add-form">
+      <div class="mode-row">
+        <button class="chip mode-chip ${calProv === 'google' ? 'sel' : ''}" data-act="cal-prov" data-prov="google">Google</button>
+        <button class="chip mode-chip ${calProv === 'apple' ? 'sel' : ''}" data-act="cal-prov" data-prov="apple">Apple</button>
+      </div>
+      <div class="cal-help">${CAL_HELP[calProv]}</div>
+      <input type="text" id="cal-url" placeholder="Paste calendar link (https:// or webcal://)" autocomplete="off" />
+      <div class="mins-row">
+        <span class="unit">remind</span>
+        ${[2, 5, 10, 15].map((m) => `<button class="chip lead-chip ${m === calLead ? 'sel' : ''}" data-act="cal-lead" data-mins="${m}">${m}m</button>`).join('')}
+        <span class="unit">before</span>
+      </div>
+      <div class="add-actions">
+        <button data-act="cal-save">Connect</button>
+        <button class="ghost" data-act="cal-cancel">Cancel</button>
+      </div>
+    </div>`
+      : '<button class="add-open" data-act="cal-open">📅 Sync with calendar</button>'
+    : (() => {
+        const nx = cal.next();
+        const sub = cal.error
+          ? 'sync failed — check the link'
+          : nx
+            ? `next: ${esc(nx.summary)} · ${fmtClock(nx.start)} · ${fmtIn(nx.start - Date.now())}`
+            : 'no upcoming events';
+        return `
+    <div class="rem cal-row">
+      <div class="rem-emoji">📅</div>
+      <div class="rem-main">
+        <div class="rem-label">${cal.provider() === 'apple' ? 'Apple' : 'Google'} Calendar</div>
+        <div class="rem-sub">${sub}</div>
+      </div>
+      <span class="rem-due">${cal.lead()}m before</span>
+      <span class="rem-actions cal-actions">
+        <button class="icon" data-act="cal-refresh" title="Refresh now">${ICONS.refresh}</button>
+        <button class="icon danger" data-act="cal-off" title="Disconnect">${ICONS.trash}</button>
+      </span>
+    </div>`;
+      })();
+
   menuEl.innerHTML = `
     <div class="m-head">
       <div>
@@ -396,6 +459,7 @@ function renderMenu() {
     </div>
     <div class="rem-list">${rows || '<div class="empty">No reminders yet — add one below 🐾</div>'}</div>
     ${addForm}
+    ${calSec}
     <div class="pet-sec">
       <input type="text" id="pet-name" value="${esc(petName())}" maxlength="14" title="Pet name" />
       <div class="skin-dots">
@@ -526,6 +590,48 @@ menuEl.addEventListener('click', (e) => {
         renderMenu();
       })
       .catch((err) => console.error('autostart toggle failed:', err));
+  } else if (act === 'cal-open') {
+    calOpen = true;
+    renderMenu();
+    menuEl.querySelector('#cal-url')?.focus();
+  } else if (act === 'cal-cancel') {
+    calOpen = false;
+    renderMenu();
+  } else if (act === 'cal-prov') {
+    calProv = btn.dataset.prov;
+    for (const b of menuEl.querySelectorAll('[data-act="cal-prov"]')) {
+      b.classList.toggle('sel', b === btn);
+    }
+    const help = menuEl.querySelector('.cal-help');
+    if (help) help.innerHTML = CAL_HELP[calProv];
+  } else if (act === 'cal-lead') {
+    calLead = parseInt(btn.dataset.mins, 10);
+    for (const b of menuEl.querySelectorAll('.lead-chip')) {
+      b.classList.toggle('sel', b === btn);
+    }
+  } else if (act === 'cal-save') {
+    const urlInput = menuEl.querySelector('#cal-url');
+    const url = urlInput.value.trim();
+    if (!/^(https?|webcal):\/\//.test(url)) {
+      urlInput.classList.add('err');
+      urlInput.focus();
+      setTimeout(() => urlInput.classList.remove('err'), 900);
+      return;
+    }
+    cal.setConfig(url, calProv, calLead);
+    calOpen = false;
+    renderMenu();
+    cal.sync(0).then(() => {
+      if (menuOpen) renderMenu();
+    });
+  } else if (act === 'cal-refresh') {
+    btn.classList.add('spin');
+    cal.sync(0).then(() => {
+      if (menuOpen) renderMenu();
+    });
+  } else if (act === 'cal-off') {
+    cal.disconnect();
+    renderMenu();
   } else if (act === 'nap') {
     pet.forceSleep();
     closeMenu();
@@ -543,6 +649,9 @@ menuEl.addEventListener('click', (e) => {
 menuEl.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.target.id === 'add-label' || e.target.id === 'add-mins')) doAdd();
   if (e.key === 'Enter' && e.target.id === 'pet-name') e.target.blur();
+  if (e.key === 'Enter' && e.target.id === 'cal-url') {
+    menuEl.querySelector('[data-act="cal-save"]')?.click();
+  }
 });
 
 menuEl.addEventListener('change', (e) => {
@@ -587,6 +696,10 @@ function openMenu() {
   menuAnchor.y = p.y - (menuEl.offsetHeight || 280) / 2;
   positionMenu();
   win.setFocus().catch(() => {});
+  // opening the menu always shows reasonably fresh calendar data
+  cal.sync(30e3).then(() => {
+    if (menuOpen && !menuEl.contains(document.activeElement)) renderMenu();
+  });
 }
 
 function closeMenu() {
@@ -620,6 +733,28 @@ function onDue(r) {
       },
     },
   ], r.emoji);
+}
+
+function showCalAlert(ev) {
+  calBubble = true;
+  cal.markAlerted(ev.id);
+  pet.setAlert(true);
+  sfx.chirp();
+  const when = ev.start - Date.now();
+  showBubble(
+    `${ev.summary} — ${when > 30e3 ? `starts ${fmtIn(when)} (${fmtClock(ev.start)})` : 'starting now'}`,
+    [
+      {
+        label: 'Got it ✓',
+        cb() {
+          calBubble = false;
+          pet.setAlert(false);
+          hideBubble();
+        },
+      },
+    ],
+    '📅'
+  );
 }
 
 function maybeWelcome() {
@@ -657,7 +792,12 @@ function frame(now) {
 
   if (now - lastTick > 1000) {
     lastTick = now;
-    reminders.tick(Date.now());
+    if (!calBubble) reminders.tick(Date.now());
+    cal.sync(); // self-throttled to every 5 minutes
+    if (!calBubble && !reminders.active) {
+      const due = cal.due(Date.now());
+      if (due[0]) showCalAlert(due[0]);
+    }
     if (menuOpen) updateMenuTimes();
   }
 
@@ -692,6 +832,7 @@ function frame(now) {
     .catch(() => {});
   pollLoop();
   ledgeLoop();
+  cal.sync(0);
   requestAnimationFrame(frame);
   maybeWelcome();
 })().catch((err) => console.error('pet boot failed:', err));

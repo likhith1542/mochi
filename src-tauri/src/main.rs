@@ -25,13 +25,32 @@ fn active_window_rect() -> Option<(f64, f64, f64, f64)> {
     Some((p.x, p.y, p.width, p.height))
 }
 
+/// Fetch an iCal (ICS) feed for calendar sync. Runs in Rust because the
+/// webview's fetch is blocked by CORS on calendar servers.
+#[tauri::command]
+async fn fetch_ics(url: String) -> Result<String, String> {
+    let url = url.trim().replacen("webcal://", "https://", 1);
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("invalid url".into());
+    }
+    let resp = reqwest::get(&url).await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    resp.text().await.map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
         ))
-        .invoke_handler(tauri::generate_handler![cursor_pos, active_window_rect])
+        .invoke_handler(tauri::generate_handler![
+            cursor_pos,
+            active_window_rect,
+            fetch_ics
+        ])
         .setup(|_app| {
             // No Dock icon / app switcher entry on macOS — it's an overlay, not an app window.
             #[cfg(target_os = "macos")]
