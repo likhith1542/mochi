@@ -1,16 +1,26 @@
 # Mochi 🐾
 
+[![CI](https://github.com/likhith1542/mochi/actions/workflows/ci.yml/badge.svg)](https://github.com/likhith1542/mochi/actions/workflows/ci.yml)
+
 A desktop pet that lives on top of your screen — and nudges you with gentle reminders (drink water, rest your eyes, stretch). Pick from 21 pets across 5 species: cats, puppies, bunnies, birds, and ghosts.
 
-## Install (macOS)
+## Install
 
-Grab the `.dmg` from [Releases](https://github.com/likhith1542/mochi/releases) and drag **Mochi** into Applications.
+Grab the build for your OS from [Releases](https://github.com/likhith1542/mochi/releases):
 
-This build is unsigned, so on first launch macOS will warn you. Either right-click `Mochi.app` → **Open** → **Open**, or run:
+- **macOS** — `.dmg` (universal: Apple Silicon + Intel). Unsigned build: right-click `Mochi.app` → **Open** → **Open**, or run `xattr -cr /Applications/Mochi.app`.
+- **Windows** — `.msi` or `-setup.exe`. SmartScreen may warn: **More info** → **Run anyway**.
+- **Linux** — `.AppImage` (`chmod +x`, then run), `.deb`, or `.rpm`. Window transparency requires a compositor.
+
+## Releasing
+
+CI builds and attaches installers for all three platforms whenever a `v*` tag is pushed:
 
 ```sh
-xattr -cr /Applications/Mochi.app
+git tag v0.2.0 && git push origin v0.2.0
 ```
+
+This creates a **draft** release with all artifacts — review it, then publish.
 
 - **Transparent full-screen overlay** that never blocks your work: clicks pass through everywhere except on the pet itself (per-pixel-style hit testing driven by a global cursor poll).
 - **Real physics** (Matter.js): gravity, bounce, walking, and drag-to-throw. Pick her up, toss her, she lands with a squash.
