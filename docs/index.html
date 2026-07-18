@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mochi — a desk pet that keeps you human</title>
+<meta name="description" content="A tiny pixel pet that lives on top of your screen — physics, 21 pets, gentle reminders to drink water and stretch, and calendar alerts. Free, open source, macOS · Windows · Linux." />
+<meta property="og:title" content="Mochi — a desk pet that keeps you human" />
+<meta property="og:description" content="A tiny pixel pet that lives on your screen: drag her, toss her, let her sit on your windows — and let her remind you to drink water, rest your eyes, and make your meetings." />
+<meta property="og:image" content="https://likhith1542.github.io/mochi/icon.png" />
+<link rel="icon" type="image/png" href="icon.png" />
+<style>
+  :root {
+    --ink: #463227;
+    --cream: #fffdf8;
+    --cream-2: #fff3e2;
+    --cream-3: #f7ecdd;
+    --orange: #f4a259;
+    --pink: #f28482;
+    --tan: #d8c7b0;
+    --sub: #8b7355;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: ui-rounded, -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+  /* hero */
+  .hero { padding: 64px 0 0; text-align: center; }
+  .hero h1 {
+    font-size: clamp(40px, 7vw, 64px);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .hero h1 span { color: var(--orange); }
+  .hero p.tag {
+    margin: 14px auto 0;
+    max-width: 560px;
+    font-size: clamp(16px, 2.4vw, 19px);
+    color: var(--sub);
+  }
+  .cta {
+    margin-top: 28px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-block;
+    background: var(--orange);
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    padding: 12px 22px;
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+    box-shadow: 0 3px 0 var(--ink);
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 var(--ink); }
+  .btn:active { transform: translateY(1px); box-shadow: 0 2px 0 var(--ink); }
+  .btn.ghost { background: var(--cream-2); font-weight: 600; }
+  .btn small { display: block; font-size: 11px; font-weight: 500; color: rgba(70,50,39,.75); }
+  .hint { margin-top: 12px; font-size: 12.5px; color: var(--sub); }
+
+  /* live pet stage */
+  .stage-wrap { margin-top: 24px; position: relative; }
+  #stage { display: block; width: 100%; height: 150px; cursor: default; }
+  .shelf { border-bottom: 3px solid var(--ink); opacity: 0.85; }
+  .stage-hint {
+    position: absolute; right: 8px; top: 4px;
+    font-size: 11.5px; color: var(--sub); user-select: none;
+  }
+
+  /* sections */
+  section { padding: 56px 0; }
+  section h2 {
+    text-align: center;
+    font-size: clamp(26px, 4vw, 34px);
+    margin-bottom: 8px;
+  }
+  section p.sub { text-align: center; color: var(--sub); max-width: 560px; margin: 0 auto 34px; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--cream-2);
+    border: 2px solid var(--ink);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 3px 0 rgba(70,50,39,.25);
+  }
+  .card .emoji { font-size: 26px; }
+  .card h3 { margin: 8px 0 4px; font-size: 16.5px; }
+  .card p { font-size: 13.5px; color: var(--sub); }
+
+  /* gallery */
+  .gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+  .pet-dot {
+    width: 64px; height: 64px;
+    background: var(--cream-2);
+    border: 2px solid var(--tan);
+    border-radius: 14px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.1s;
+  }
+  .pet-dot:hover { transform: translateY(-3px); border-color: var(--ink); }
+  .pet-dot.sel { border-color: var(--ink); outline: 3px solid var(--orange); outline-offset: 2px; }
+  .pet-dot canvas { image-rendering: pixelated; }
+  .gallery-name { text-align: center; margin-top: 16px; font-weight: 700; color: var(--sub); }
+
+  /* install */
+  .os-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .os-card {
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+  .os-card h3 { font-size: 18px; }
+  .os-card .btn { margin-top: 12px; }
+  .os-card p { font-size: 12.5px; color: var(--sub); margin-top: 10px; }
+  code {
+    background: var(--cream-3);
+    border: 1px solid var(--tan);
+    border-radius: 6px;
+    padding: 1px 6px;
+    font-size: 12px;
+  }
+
+  footer {
+    border-top: 2px dashed var(--tan);
+    padding: 28px 0 40px;
+    text-align: center;
+    color: var(--sub);
+    font-size: 13.5px;
+  }
+  footer a { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header class="hero wrap">
+  <h1>Meet <span id="hero-name">Mochi</span> 🐾</h1>
+  <p class="tag">A tiny pixel pet that lives on top of your screen — and gently reminds you to drink water, rest your eyes, and make it to your meetings.</p>
+  <div class="cta">
+    <a class="btn" id="dl-main" href="https://github.com/likhith1542/mochi/releases/latest">Download for macOS<small id="dl-ver">latest release</small></a>
+    <a class="btn ghost" href="https://github.com/likhith1542/mochi">View on GitHub</a>
+  </div>
+  <p class="hint">Free &amp; open source · macOS · Windows · Linux · no accounts, everything stays on your machine</p>
+  <div class="stage-wrap">
+    <span class="stage-hint">click her to say hi ♥</span>
+    <canvas id="stage" class="shelf"></canvas>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <h2>She's not in your way. She's on your side.</h2>
+    <p class="sub">A transparent overlay with real physics — your clicks pass straight through to your apps, everywhere except on her.</p>
+    <div class="cards">
+      <div class="card"><div class="emoji">🫟</div><h3>Never blocks a click</h3><p>She walks over every window, but the overlay is click-through everywhere except her tiny body. Your work stays yours.</p></div>
+      <div class="card"><div class="emoji">🪀</div><h3>Real physics</h3><p>Drag her, toss her, watch her bounce and land with a squash. Release her gently mid-air and she stays pinned right there.</p></div>
+      <div class="card"><div class="emoji">🪟</div><h3>Sits on your windows</h3><p>Drop her onto your focused window and she'll perch on its top edge, stroll along it, and tumble off the end.</p></div>
+      <div class="card"><div class="emoji">💧</div><h3>Gentle reminders</h3><p>Water, 20-20-20 eye breaks, stretching — or anything you type, repeating or one-shot. She acts out each reminder: drinking, reading, standing tall.</p></div>
+      <div class="card"><div class="emoji">📅</div><h3>Calendar alerts</h3><p>Paste your Google or Apple calendar's private iCal link and she'll hop with a speech bubble minutes before each event.</p></div>
+      <div class="card"><div class="emoji">🎧</div><h3>Full of life</h3><p>She naps, blinks, follows your cursor, wanders over when your mouse rests, purrs when petted — and each species has its own voice.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="pets" style="background: var(--cream-3);">
+  <div class="wrap">
+    <h2>21 pets, 5 species</h2>
+    <p class="sub">Cats, puppies, bunnies, birds, and ghosts — each in several colors, each with its own name and voice. Click one to try it above.</p>
+    <div class="gallery" id="gallery"></div>
+    <div class="gallery-name" id="gallery-name">Mochi the cat</div>
+  </div>
+</section>
+
+<section id="download">
+  <div class="wrap">
+    <h2>Adopt one</h2>
+    <p class="sub">Unsigned hobby builds — your OS will ask you to confirm the first launch.</p>
+    <div class="os-cards">
+      <div class="os-card">
+        <h3>🍎 macOS</h3>
+        <a class="btn" id="dl-mac" href="https://github.com/likhith1542/mochi/releases/latest">Download .dmg</a>
+        <p>Universal (Apple Silicon + Intel).<br />First launch: right-click → Open, or <code>xattr -cr /Applications/Mochi.app</code></p>
+      </div>
+      <div class="os-card">
+        <h3>🪟 Windows</h3>
+        <a class="btn" id="dl-win" href="https://github.com/likhith1542/mochi/releases/latest">Download .msi</a>
+        <p>If SmartScreen warns: <br /><b>More info → Run anyway</b></p>
+      </div>
+      <div class="os-card">
+        <h3>🐧 Linux</h3>
+        <a class="btn" id="dl-linux" href="https://github.com/likhith1542/mochi/releases/latest">Download .AppImage</a>
+        <p><code>chmod +x</code> then run. <br /><span id="linux-extra">.deb and .rpm also available.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Open source under MIT · <a href="https://github.com/likhith1542/mochi">GitHub</a> · built with Tauri + Matter.js · made with 🧡
+  </div>
+</footer>
+
+<script>
+// ---------------------------------------------------------------------------
+// The same sprite system the app uses: pets are 16×13 letter grids rendered
+// through small palettes. This page runs a simplified live pet on the shelf.
+// ---------------------------------------------------------------------------
+const CELL = 5;
+const COLS = 16;
+const ROWS = 13;
+
+const CAT = {
+  base: [
+    '..kk........kk..','.kppk......kppk.','.kpppk....kpppk.','koooookkkkoooook',
+    'kooooooooooooook','koooEEooooEEoook','koooEEooooEEoook','koooowwppwwooook',
+    'kooooowwwwoooook','kooooooooooooook','kooooooooooooook','.kooooooooooook.',
+    '..kkk......kkk..',
+  ],
+  closed: [[5,'kooooooooooooook'],[6,'koookkoooookkook']],
+  walkA: [[12,'.kkk........kkk.']], walkB: [[12,'...kkk....kkk...']],
+  eyeL:{x:5*CELL,y:6*CELL}, eyeR:{x:11*CELL,y:6*CELL}, tail:'wag',
+};
+const BUNNY = {
+  base: [
+    '...kk......kk...','..kppk....kppk..','..kppk....kppk..','.kooooooooooook.',
+    'kooooooooooooook','koooEEooooEEoook','koooEEooooEEoook','koooowwppwwooook',
+    'kooooowwwwoooook','kooooooooooooook','kooooooooooooook','.kooooooooooook.',
+    '..kkk......kkk..',
+  ],
+  closed: [[5,'kooooooooooooook'],[6,'koookkoooookkook']],
+  walkA: [[12,'.kkk........kkk.']], walkB: [[12,'...kkk....kkk...']],
+  eyeL:{x:5*CELL,y:6*CELL}, eyeR:{x:11*CELL,y:6*CELL}, tail:'puff',
+};
+const PUP = {
+  base: [
+    '................','.pp..........pp.','.ppkkkkkkkkkkpp.','.ppoooooooooopp.',
+    '.ppoooooooooopp.','.ppoEEooooEEopp.','.ppoEEooooEEopp.','koooowwwwwwooook',
+    'kooooowppwoooook','kooooooooooooook','kooooooooooooook','.kooooooooooook.',
+    '..kkk......kkk..',
+  ],
+  closed: [[5,'.ppoooooooooopp.'],[6,'.ppokkoooookkopp']],
+  walkA: [[12,'.kkk........kkk.']], walkB: [[12,'...kkk....kkk...']],
+  eyeL:{x:5*CELL,y:6*CELL}, eyeR:{x:11*CELL,y:6*CELL}, tail:'wag',
+};
+const BIRD = {
+  base: [
+    '....kkkkkkkk....','...kooooooook...','..koooooooooook.','..koEEooooEEok..',
+    '..koEEooooEEok..','..koooppppooook.','..koowwwwwwook..','.koowwwwwwwwook.',
+    '.koowwwwwwwwook.','.koowwwwwwwwook.','.koowwwwwwwwook.','..koowwwwwwook..',
+    '..ppp......ppp..',
+  ],
+  closed: [[3,'..koooooooooook.'],[4,'..kokkoooookkok.']],
+  walkA: [[12,'...ppp....ppp...']], walkB: [[12,'.ppp......ppp...']],
+  eyeL:{x:5*CELL,y:4*CELL}, eyeR:{x:11*CELL,y:4*CELL}, tail:'none',
+};
+const GHOST = {
+  base: [
+    '.....kkkkkk.....','...kkooooookk...','..koooooooooook.','..koooooooooook.',
+    '..koEEooooEEok..','..koEEooooEEok..','..kooooppooook..','.kooooooooooook.',
+    '.kooooooooooook.','kooooooooooooook','kooooooooooooook','kooooooooooooook',
+    'kk..kk..kk..kk..',
+  ],
+  closed: [[4,'..koooooooooook.'],[5,'..kokkoooookkok.']],
+  walkA: [[12,'..kk..kk..kk..kk']], walkB: [],
+  eyeL:{x:5*CELL,y:5*CELL}, eyeR:{x:11*CELL,y:5*CELL}, tail:'none', float:true,
+};
+const SPECIES = { cat: CAT, bunny: BUNNY, pup: PUP, bird: BIRD, ghost: GHOST };
+
+const PETS = [
+  ['cat','Mochi',{k:'#463227',o:'#f4a259',p:'#f28482',w:'#fff3e2',E:'#fffdf6'}],
+  ['cat','Miso',{k:'#4a3a28',o:'#e9cfa3',p:'#f0958f',w:'#fff7e8',E:'#fffdf6'}],
+  ['cat','Sumi',{k:'#33323e',o:'#9fa3b5',p:'#f2a5b5',w:'#e9eaf2',E:'#ffffff'}],
+  ['cat','Yuki',{k:'#4a4038',o:'#f3efe6',p:'#f6b7c5',w:'#ffffff',E:'#ffffff'}],
+  ['cat','Kuro',{k:'#26212c',o:'#4d4653',p:'#e58a9a',w:'#6b6376',E:'#fffdf6'}],
+  ['pup','Kobe',{k:'#3f2f23',o:'#c98d5a',p:'#7d5638',w:'#f6e7d3',E:'#fffdf6'}],
+  ['pup','Sunny',{k:'#4a3820',o:'#e5b56b',p:'#b98a44',w:'#fdf2d9',E:'#fffdf6'}],
+  ['pup','Koda',{k:'#363b45',o:'#aeb6c2',p:'#6f7683',w:'#eef1f5',E:'#ffffff'}],
+  ['pup','Bruno',{k:'#2f2015',o:'#7a5238',p:'#4e3322',w:'#e8d6c3',E:'#fffdf6'}],
+  ['bunny','Mimi',{k:'#4a3c38',o:'#f7f1e9',p:'#f4a9bc',w:'#ffffff',E:'#ffffff'}],
+  ['bunny','Pepper',{k:'#3f3a44',o:'#b9b4bd',p:'#f2a9c0',w:'#f0edf3',E:'#ffffff'}],
+  ['bunny','Clover',{k:'#4a3826',o:'#c9a27a',p:'#f2b3a0',w:'#f4e8d8',E:'#fffdf6'}],
+  ['bunny','Ink',{k:'#242028',o:'#4b4550',p:'#e58aa5',w:'#6d6678',E:'#fffdf6'}],
+  ['bird','Pip',{k:'#20242f',o:'#333a4f',p:'#f2a24b',w:'#f4f6f8',E:'#ffffff'}],
+  ['bird','Waddle',{k:'#4a3a1e',o:'#f2cf5b',p:'#ef9f3c',w:'#fbf3dc',E:'#ffffff'}],
+  ['bird','Ruby',{k:'#3d1f1a',o:'#c95b4e',p:'#f2a24b',w:'#f7e1c9',E:'#ffffff'}],
+  ['bird','Sky',{k:'#2c3e55',o:'#7fb3e0',p:'#f2b04b',w:'#eaf3fb',E:'#ffffff'}],
+  ['ghost','Boo',{k:'#474060',o:'#b9aef0',p:'#8d81c9',w:'#e6e0ff',E:'#ffffff'}],
+  ['ghost','Minty',{k:'#3c5c4e',o:'#9adbc0',p:'#6fae94',w:'#e4f7ee',E:'#ffffff'}],
+  ['ghost','Peachy',{k:'#5c4030',o:'#f7c59f',p:'#d99a6c',w:'#fdeee0',E:'#ffffff'}],
+  ['ghost','Misty',{k:'#333a47',o:'#9fa8b8',p:'#727c8f',w:'#e6eaf1',E:'#ffffff'}],
+];
+const SPECIES_LABEL = { cat:'cat', pup:'puppy', bunny:'bunny', bird:'bird', ghost:'ghost' };
+
+const norm = (r) => (r + '.'.repeat(COLS)).slice(0, COLS);
+function makeFrame(base, patches, pal, cell = CELL) {
+  const rows = base.slice();
+  for (const [i, s] of patches) rows[i] = s;
+  const c = document.createElement('canvas');
+  c.width = COLS * cell; c.height = ROWS * cell;
+  const g = c.getContext('2d');
+  rows.forEach((row, y) => {
+    const r = norm(row);
+    for (let x = 0; x < COLS; x++) {
+      const col = pal[r[x]];
+      if (col) { g.fillStyle = col; g.fillRect(x * cell, y * cell, cell, cell); }
+    }
+  });
+  return c;
+}
+
+// ---------------- live pet on the shelf ----------------
+const stage = document.getElementById('stage');
+const g = stage.getContext('2d');
+let W = 0, H = 150, DPR = 1;
+function sizeStage() {
+  DPR = window.devicePixelRatio || 1;
+  W = stage.clientWidth;
+  stage.width = Math.round(W * DPR);
+  stage.height = Math.round(H * DPR);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', sizeStage);
+sizeStage();
+
+const SPR_W = COLS * CELL, SPR_H = ROWS * CELL;
+let sel = 0;
+let frames = {};
+function buildFrames() {
+  const [spId, , pal] = PETS[sel];
+  const sp = SPECIES[spId];
+  frames = {
+    open: makeFrame(sp.base, [], pal),
+    closed: makeFrame(sp.base, sp.closed, pal),
+    walkA: makeFrame(sp.base, sp.walkA, pal),
+    walkB: makeFrame(sp.base, sp.walkB, pal),
+    sp, pal,
+  };
+}
+buildFrames();
+
+const petState = {
+  x: 120, dir: 1, vx: 0, t: 0, state: 'idle',
+  decideAt: 2, blinkUntil: 0, nextBlink: 3, sleepUntil: 0,
+  particles: [], zAt: 0,
+};
+const cursor = { x: -1e4, y: -1e4 };
+document.addEventListener('mousemove', (e) => {
+  const r = stage.getBoundingClientRect();
+  cursor.x = e.clientX - r.left;
+  cursor.y = e.clientY - r.top;
+});
+
+function overShelfPet(e) {
+  const r = stage.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  return Math.abs(x - petState.x) < 50 && y > H - SPR_H - 20;
+}
+document.addEventListener('click', (e) => {
+  if (!overShelfPet(e)) return;
+  petState.state = 'idle';
+  petState.decideAt = petState.t + 2;
+  for (let i = 0; i < 3; i++) {
+    petState.particles.push({
+      x: petState.x + (Math.random() - 0.5) * 50,
+      y: H - SPR_H - 6, vy: -30 - Math.random() * 14,
+      vx: (Math.random() - 0.5) * 12, age: 0, life: 1.3, text: '♥', color: '#e5566d',
+    });
+  }
+  purr();
+});
+stage.style.cursor = 'pointer';
+
+let last = performance.now();
+function tick(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  const p = petState;
+  p.t += dt;
+
+  if (p.t > p.nextBlink) { p.blinkUntil = p.t + 0.14; p.nextBlink = p.t + 2.5 + Math.random() * 4; }
+  if (p.state === 'idle' && p.t > p.decideAt) {
+    const r = Math.random();
+    if (r < 0.55) { p.state = 'walk'; p.dir = Math.random() < 0.5 ? -1 : 1; p.decideAt = p.t + 1.5 + Math.random() * 2.5; }
+    else if (r < 0.7) { p.state = 'sleep'; p.sleepUntil = p.t + 6 + Math.random() * 6; }
+    else p.decideAt = p.t + 2 + Math.random() * 3;
+  }
+  if (p.state === 'walk') {
+    p.x += p.dir * 42 * dt;
+    if (p.x < 60) p.dir = 1;
+    if (p.x > W - 60) p.dir = -1;
+    if (p.t > p.decideAt) { p.state = 'idle'; p.decideAt = p.t + 1.5 + Math.random() * 3; }
+  } else if (p.state === 'sleep') {
+    if (p.t > p.sleepUntil) { p.state = 'idle'; p.decideAt = p.t + 2; }
+    if (p.t > p.zAt) {
+      p.particles.push({ x: p.x + 20, y: H - SPR_H - 4, vy: -22, vx: 6, age: 0, life: 1.5, text: 'z', color: '#9a866f' });
+      p.zAt = p.t + 1.2;
+    }
+  }
+  for (const q of p.particles) { q.age += dt; q.x += q.vx * dt; q.y += q.vy * dt; }
+  p.particles = p.particles.filter((q) => q.age < q.life);
+
+  // draw
+  g.clearRect(0, 0, W, H);
+  const sleeping = p.state === 'sleep';
+  const blink = sleeping || p.t < p.blinkUntil;
+  let frame = blink ? frames.closed : frames.open;
+  if (p.state === 'walk' && !blink) frame = Math.floor(p.t * 6) % 2 ? frames.walkA : frames.walkB;
+
+  let sy = 1 + Math.sin(p.t * 2.2) * 0.015;
+  let sx = 1;
+  if (sleeping) { sy *= 0.9; sx *= 1.05; }
+  let bob = frames.sp.float ? Math.sin(p.t * 2.5) * 2.5 : 0;
+
+  g.save();
+  g.translate(p.x, H - 3 + bob);
+  g.scale((p.state === 'walk' ? p.dir : 1) * sx, sy);
+  g.imageSmoothingEnabled = false;
+
+  if (frames.sp.tail === 'wag') {
+    const wag = Math.sin(p.t * (sleeping ? 1.2 : 3.5));
+    g.fillStyle = frames.pal.o;
+    const tx = -SPR_W / 2 - CELL, ty = -CELL * 3;
+    g.fillRect(tx, ty, CELL, CELL);
+    g.fillRect(tx - CELL, ty - CELL + (wag > 0 ? 0 : CELL), CELL, CELL);
+    g.fillStyle = frames.pal.k;
+    g.fillRect(tx - CELL * 2, ty - CELL * 2 + (wag > 0 ? 0 : CELL * 2), CELL, CELL);
+  } else if (frames.sp.tail === 'puff') {
+    g.fillStyle = frames.pal.w;
+    g.fillRect(-SPR_W / 2 - CELL, -CELL * 4, CELL * 2, CELL * 2);
+  }
+
+  g.drawImage(frame, -SPR_W / 2, -SPR_H);
+
+  if (!blink) {
+    const dx = cursor.x - p.x, dy = cursor.y - (H - SPR_H / 2);
+    const m = Math.hypot(dx, dy) || 1;
+    const fac = p.state === 'walk' ? p.dir : 1;
+    const ox = Math.max(-2, Math.min(2, (dx / m) * 2.4)) * fac;
+    const oy = Math.max(-2, Math.min(2, (dy / m) * 2.4));
+    g.fillStyle = '#2f2724';
+    for (const e of [frames.sp.eyeL, frames.sp.eyeR]) {
+      g.fillRect(-SPR_W / 2 + e.x - 2 + ox, -SPR_H + e.y - 2 + oy, 4, 4);
+    }
+  }
+  g.restore();
+
+  for (const q of p.particles) {
+    g.globalAlpha = Math.max(0, 1 - q.age / q.life);
+    g.fillStyle = q.color;
+    g.font = '600 15px ui-rounded, sans-serif';
+    g.fillText(q.text, q.x, q.y);
+  }
+  g.globalAlpha = 1;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// purr on petting
+let actx = null;
+function purr() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const t0 = actx.currentTime;
+    const o = actx.createOscillator(), f = actx.createBiquadFilter(), gn = actx.createGain();
+    const lfo = actx.createOscillator(), lg = actx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = 110;
+    f.type = 'lowpass'; f.frequency.value = 520;
+    lfo.frequency.value = 24; lg.gain.value = 0.03;
+    gn.gain.setValueAtTime(0.0001, t0);
+    gn.gain.exponentialRampToValueAtTime(0.05, t0 + 0.07);
+    gn.gain.setValueAtTime(0.05, t0 + 0.55);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.85);
+    lfo.connect(lg).connect(gn.gain);
+    o.connect(f).connect(gn).connect(actx.destination);
+    o.start(t0); lfo.start(t0); o.stop(t0 + 0.9); lfo.stop(t0 + 0.9);
+  } catch {}
+}
+
+// ---------------- gallery ----------------
+const gallery = document.getElementById('gallery');
+const galleryName = document.getElementById('gallery-name');
+PETS.forEach(([spId, name, pal], i) => {
+  const btn = document.createElement('button');
+  btn.className = 'pet-dot' + (i === 0 ? ' sel' : '');
+  btn.title = name;
+  const cv = document.createElement('canvas');
+  cv.width = 48; cv.height = 48;
+  const cg = cv.getContext('2d');
+  cg.imageSmoothingEnabled = false;
+  const fr = makeFrame(SPECIES[spId].base, [], pal, 3);
+  cg.drawImage(fr, 0, 48 - ROWS * 3);
+  btn.appendChild(cv);
+  btn.addEventListener('click', () => {
+    sel = i;
+    buildFrames();
+    document.querySelectorAll('.pet-dot').forEach((b, j) => b.classList.toggle('sel', j === i));
+    galleryName.textContent = `${name} the ${SPECIES_LABEL[spId]}`;
+    document.getElementById('hero-name').textContent = name;
+  });
+  gallery.appendChild(btn);
+});
+
+// ---------------- download links from latest release ----------------
+fetch('https://api.github.com/repos/likhith1542/mochi/releases/latest')
+  .then((r) => r.json())
+  .then((rel) => {
+    const find = (test) => (rel.assets || []).find((a) => test(a.name));
+    const dmg = find((n) => n.endsWith('.dmg'));
+    const msi = find((n) => n.endsWith('.msi'));
+    const app = find((n) => n.endsWith('.AppImage'));
+    if (dmg) {
+      document.getElementById('dl-main').href = dmg.browser_download_url;
+      document.getElementById('dl-mac').href = dmg.browser_download_url;
+    }
+    if (msi) document.getElementById('dl-win').href = msi.browser_download_url;
+    if (app) document.getElementById('dl-linux').href = app.browser_download_url;
+    if (rel.tag_name) document.getElementById('dl-ver').textContent = `${rel.tag_name} · universal`;
+  })
+  .catch(() => {});
+</script>
+</body>
+</html>

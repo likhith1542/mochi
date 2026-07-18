@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/likhith1542/mochi/actions/workflows/ci.yml/badge.svg)](https://github.com/likhith1542/mochi/actions/workflows/ci.yml)
 
+**Website: [likhith1542.github.io/mochi](https://likhith1542.github.io/mochi/)** — meet the pets live in your browser.
+
 A desktop pet that lives on top of your screen — and nudges you with gentle reminders (drink water, rest your eyes, stretch). Pick from 21 pets across 5 species: cats, puppies, bunnies, birds, and ghosts.
 
 ## Install
