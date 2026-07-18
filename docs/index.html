@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Mochi — a desk pet that keeps you human</title>
-<meta name="description" content="A tiny pixel pet that lives on top of your screen — physics, 21 pets, gentle reminders to drink water and stretch, and calendar alerts. Free, open source, macOS · Windows · Linux." />
+<meta name="description" content="A tiny pixel pet that lives on top of your screen — physics, 29 pets, gentle reminders to drink water and stretch, and calendar alerts. Free, open source, macOS · Windows · Linux." />
 <meta property="og:title" content="Mochi — a desk pet that keeps you human" />
 <meta property="og:description" content="A tiny pixel pet that lives on your screen: drag her, toss her, let her sit on your windows — and let her remind you to drink water, rest your eyes, and make your meetings." />
 <meta property="og:image" content="https://likhith1542.github.io/mochi/icon.png" />
@@ -189,8 +189,8 @@
 
 <section id="pets" style="background: var(--cream-3);">
   <div class="wrap">
-    <h2>21 pets, 5 species</h2>
-    <p class="sub">Cats, puppies, bunnies, birds, and ghosts — each in several colors, each with its own name and voice. Click one to try it above.</p>
+    <h2>29 pets, 7 species</h2>
+    <p class="sub">Cats, puppies, bunnies, birds, ghosts — and a crew of kids in every skin tone. Each pet has its own name and voice. Click one to try it above.</p>
     <div class="gallery" id="gallery"></div>
     <div class="gallery-name" id="gallery-name">Mochi the cat</div>
   </div>
@@ -290,7 +290,29 @@ const GHOST = {
   walkA: [[12,'..kk..kk..kk..kk']], walkB: [],
   eyeL:{x:5*CELL,y:5*CELL}, eyeR:{x:11*CELL,y:5*CELL}, tail:'none', float:true,
 };
-const SPECIES = { cat: CAT, bunny: BUNNY, pup: PUP, bird: BIRD, ghost: GHOST };
+const BOY = {
+  base: [
+    '....kk.kk.kk....','...kkppppppkk...','..kppppppppppk..','.kppppppppppppk.',
+    '.kpppoooooopppk.','.kooooooooooook.','.kooEEooooEEook.','.kooEEooooEEook.',
+    '.kooooooooooook.','..kooooooooook..','..kwwwwwwwwwwk..','..kwwwwwwwwwwk..',
+    '...kk......kk...',
+  ],
+  closed: [[6,'.kooooooooooook.'],[7,'.kookkooookkook.']],
+  walkA: [[12,'..kk........kk..']], walkB: [[12,'....kk....kk....']],
+  eyeL:{x:5*CELL,y:7*CELL}, eyeR:{x:11*CELL,y:7*CELL}, tail:'none',
+};
+const GIRL = {
+  base: [
+    '.....kkkkkk.....','...kkppppppkk...','..kppppppppppk..','.kppppppppppppk.',
+    '.kpppoooooopppk.','pkpoooooooooopkp','pkpoEEooooEEopkp','pkpoEEooooEEopkp',
+    '.kpoooooooooopk.','..kppooooooppk..','..kwwwwwwwwwwk..','..kwwwwwwwwwwk..',
+    '...kk......kk...',
+  ],
+  closed: [[6,'pkpoooooooooopkp'],[7,'pkpokkooookkopkp']],
+  walkA: [[12,'..kk........kk..']], walkB: [[12,'....kk....kk....']],
+  eyeL:{x:5*CELL,y:7*CELL}, eyeR:{x:11*CELL,y:7*CELL}, tail:'none',
+};
+const SPECIES = { cat: CAT, bunny: BUNNY, pup: PUP, bird: BIRD, ghost: GHOST, boy: BOY, girl: GIRL };
 
 const PETS = [
   ['cat','Mochi',{k:'#463227',o:'#f4a259',p:'#f28482',w:'#fff3e2',E:'#fffdf6'}],
@@ -314,8 +336,16 @@ const PETS = [
   ['ghost','Minty',{k:'#3c5c4e',o:'#9adbc0',p:'#6fae94',w:'#e4f7ee',E:'#ffffff'}],
   ['ghost','Peachy',{k:'#5c4030',o:'#f7c59f',p:'#d99a6c',w:'#fdeee0',E:'#ffffff'}],
   ['ghost','Misty',{k:'#333a47',o:'#9fa8b8',p:'#727c8f',w:'#e6eaf1',E:'#ffffff'}],
+  ['boy','Kai',{k:'#42301f',o:'#f6d7b8',p:'#3e2f23',w:'#4fb3a9',E:'#ffffff'}],
+  ['boy','Leo',{k:'#4a3320',o:'#e8bd8f',p:'#e8c86a',w:'#e2574c',E:'#ffffff'}],
+  ['boy','Ravi',{k:'#3b2817',o:'#c68e5e',p:'#26201c',w:'#7f6bd0',E:'#ffffff'}],
+  ['boy','Dre',{k:'#241710',o:'#7c4f31',p:'#1c1714',w:'#f4a259',E:'#ffffff'}],
+  ['girl','Luna',{k:'#42301f',o:'#f6d7b8',p:'#f28cb4',w:'#7fd8c0',E:'#ffffff'}],
+  ['girl','Zoe',{k:'#4a3320',o:'#e8bd8f',p:'#6b4a2f',w:'#f2cf5b',E:'#ffffff'}],
+  ['girl','Amara',{k:'#382513',o:'#a97146',p:'#26201c',w:'#b9aef0',E:'#ffffff'}],
+  ['girl','Nia',{k:'#241710',o:'#7c4f31',p:'#1c1714',w:'#f28482',E:'#ffffff'}],
 ];
-const SPECIES_LABEL = { cat:'cat', pup:'puppy', bunny:'bunny', bird:'bird', ghost:'ghost' };
+const SPECIES_LABEL = { cat:'cat', pup:'puppy', bunny:'bunny', bird:'bird', ghost:'ghost', boy:'boy', girl:'girl' };
 
 const norm = (r) => (r + '.'.repeat(COLS)).slice(0, COLS);
 function makeFrame(base, patches, pal, cell = CELL) {

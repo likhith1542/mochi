@@ -125,7 +125,26 @@ function woo() {
   note({ freq: 330, to: 540, time: 0.45, gain: 0.03, when: 0.4, attack: 0.06 });
 }
 
-const VOICES = { cat: purr, pup: boof, bunny: squeak, bird: tweet, ghost: woo };
+// humans: a cheerful two-note whistle (girl's a bit brighter)
+function whistleBoy() {
+  note({ freq: 740, to: 988, time: 0.12, gain: 0.045, type: 'sine' });
+  note({ freq: 988, to: 740, time: 0.16, gain: 0.04, when: 0.15, type: 'sine' });
+}
+
+function whistleGirl() {
+  note({ freq: 932, to: 1245, time: 0.12, gain: 0.045, type: 'sine' });
+  note({ freq: 1245, to: 932, time: 0.16, gain: 0.04, when: 0.15, type: 'sine' });
+}
+
+const VOICES = {
+  cat: purr,
+  pup: boof,
+  bunny: squeak,
+  bird: tweet,
+  ghost: woo,
+  boy: whistleBoy,
+  girl: whistleGirl,
+};
 
 export const sfx = {
   // reminder due: gentle three-note pentatonic rise (C6 E6 G6)

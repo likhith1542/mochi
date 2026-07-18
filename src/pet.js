@@ -182,12 +182,84 @@ const GHOST_SPECIES = {
   float: true,
 };
 
+// Humans: o = skin, p = hair, w = shirt, k = outline, E = eyes.
+// Codex-pets style: round chibi silhouette, big head, eyes low, no mouth.
+const BOY_SPECIES = {
+  base: [
+    '....kk.kk.kk....',
+    '...kkppppppkk...',
+    '..kppppppppppk..',
+    '.kppppppppppppk.',
+    '.kpppoooooopppk.',
+    '.kooooooooooook.',
+    '.kooEEooooEEook.',
+    '.kooEEooooEEook.',
+    '.kooooooooooook.',
+    '..kooooooooook..',
+    '..kwwwwwwwwwwk..',
+    '..kwwwwwwwwwwk..',
+    '...kk......kk...',
+  ],
+  eyes: {
+    open: [],
+    closed: [
+      [6, '.kooooooooooook.'],
+      [7, '.kookkooookkook.'],
+    ],
+    wide: [[5, '.kooEEooooEEook.']],
+  },
+  feet: {
+    stand: [],
+    walkA: [[12, '..kk........kk..']],
+    walkB: [[12, '....kk....kk....']],
+  },
+  eyeL: { x: 5 * CELL, y: 7 * CELL },
+  eyeR: { x: 11 * CELL, y: 7 * CELL },
+  tail: 'none',
+};
+
+const GIRL_SPECIES = {
+  base: [
+    '.....kkkkkk.....',
+    '...kkppppppkk...',
+    '..kppppppppppk..',
+    '.kppppppppppppk.',
+    '.kpppoooooopppk.',
+    'pkpoooooooooopkp',
+    'pkpoEEooooEEopkp',
+    'pkpoEEooooEEopkp',
+    '.kpoooooooooopk.',
+    '..kppooooooppk..',
+    '..kwwwwwwwwwwk..',
+    '..kwwwwwwwwwwk..',
+    '...kk......kk...',
+  ],
+  eyes: {
+    open: [],
+    closed: [
+      [6, 'pkpoooooooooopkp'],
+      [7, 'pkpokkooookkopkp'],
+    ],
+    wide: [[5, 'pkpoEEooooEEopkp']],
+  },
+  feet: {
+    stand: [],
+    walkA: [[12, '..kk........kk..']],
+    walkB: [[12, '....kk....kk....']],
+  },
+  eyeL: { x: 5 * CELL, y: 7 * CELL },
+  eyeR: { x: 11 * CELL, y: 7 * CELL },
+  tail: 'none',
+};
+
 const SPECIES = {
   cat: CAT_SPECIES,
   bunny: BUNNY_SPECIES,
   pup: PUP_SPECIES,
   bird: BIRD_SPECIES,
   ghost: GHOST_SPECIES,
+  boy: BOY_SPECIES,
+  girl: GIRL_SPECIES,
 };
 
 // Prop animations the pet can perform (per-reminder or while idle).
@@ -197,6 +269,8 @@ export const ANIMS = [
   { id: 'read', emoji: '📖', label: 'Read a book' },
   { id: 'music', emoji: '🎧', label: 'Listen to music' },
   { id: 'type', emoji: '⌨️', label: 'Type away' },
+  { id: 'dance', emoji: '🕺', label: 'Dance' },
+  { id: 'game', emoji: '🎮', label: 'Game on' },
 ];
 const ANIM_IDS = new Set(ANIMS.map((a) => a.id));
 
@@ -206,6 +280,8 @@ export const SPECIES_INFO = [
   { id: 'bunny', label: 'Bunny' },
   { id: 'bird', label: 'Bird' },
   { id: 'ghost', label: 'Ghost' },
+  { id: 'boy', label: 'Boy' },
+  { id: 'girl', label: 'Girl' },
 ];
 
 // Every species comes in several color variants, each with a default name.
@@ -240,6 +316,20 @@ export const VARIANTS = {
     { id: 'mint', name: 'Minty', pal: { k: '#3c5c4e', o: '#9adbc0', p: '#6fae94', w: '#e4f7ee', E: '#ffffff' } },
     { id: 'peach', name: 'Peachy', pal: { k: '#5c4030', o: '#f7c59f', p: '#d99a6c', w: '#fdeee0', E: '#ffffff' } },
     { id: 'slate', name: 'Misty', pal: { k: '#333a47', o: '#9fa8b8', p: '#727c8f', w: '#e6eaf1', E: '#ffffff' } },
+  ],
+  // human variants span a range of real skin tones (o), with their own hair
+  // (p) and shirt (w) colors to keep everyone distinct and fun
+  boy: [
+    { id: 'kai', name: 'Kai', pal: { k: '#42301f', o: '#f6d7b8', p: '#3e2f23', w: '#4fb3a9', E: '#ffffff' } },
+    { id: 'leo', name: 'Leo', pal: { k: '#4a3320', o: '#e8bd8f', p: '#e8c86a', w: '#e2574c', E: '#ffffff' } },
+    { id: 'ravi', name: 'Ravi', pal: { k: '#3b2817', o: '#c68e5e', p: '#26201c', w: '#7f6bd0', E: '#ffffff' } },
+    { id: 'dre', name: 'Dre', pal: { k: '#241710', o: '#7c4f31', p: '#1c1714', w: '#f4a259', E: '#ffffff' } },
+  ],
+  girl: [
+    { id: 'luna', name: 'Luna', pal: { k: '#42301f', o: '#f6d7b8', p: '#f28cb4', w: '#7fd8c0', E: '#ffffff' } },
+    { id: 'zoe', name: 'Zoe', pal: { k: '#4a3320', o: '#e8bd8f', p: '#6b4a2f', w: '#f2cf5b', E: '#ffffff' } },
+    { id: 'amara', name: 'Amara', pal: { k: '#382513', o: '#a97146', p: '#26201c', w: '#b9aef0', E: '#ffffff' } },
+    { id: 'nia', name: 'Nia', pal: { k: '#241710', o: '#7c4f31', p: '#1c1714', w: '#f28482', E: '#ffffff' } },
   ],
 };
 
@@ -512,6 +602,12 @@ export class Pet {
           } else if (a === 'stand' && this.t > this.rhythmAt) {
             this.spawn('✦', '#e8b64c', 34);
             this.rhythmAt = this.t + 2.2;
+          } else if (a === 'dance' && this.t > this.rhythmAt) {
+            this.spawn(Math.random() < 0.5 ? '✨' : '♪', '#e8b64c', 40);
+            this.rhythmAt = this.t + 0.6;
+          } else if (a === 'game' && this.t > this.rhythmAt) {
+            this.spawn('!', '#7f6bd0', 20);
+            this.rhythmAt = this.t + 2.5 + Math.random() * 2;
           }
           if (this.alert && this.t > this.hopAt) {
             this.spawn('!', '#e07a2f', 10);
@@ -616,20 +712,30 @@ export class Pet {
       g.fillStyle = c2;
       g.fillRect(-43, -40, 6, 10);
       g.fillRect(37, -40, 6, 10);
-    } else if (name === 'type') {
+    } else if (name === 'game') {
+      // game controller held out front
       g.fillStyle = '#3a4152';
-      g.fillRect(-19, -32, 38, 26);
-      g.fillStyle = '#cfe8ff';
-      g.fillRect(-16, -29, 32, 20);
-      g.fillStyle = '#7fb3e0';
-      const ph = Math.floor(this.t * 2.5) % 3;
-      g.fillRect(-13, -26, 14 + ph * 4, 2);
-      g.fillRect(-13, -22, 20 - ph * 3, 2);
-      g.fillRect(-13, -18, 8 + ph * 5, 2);
+      g.fillRect(-16, -18, 32, 12);
+      g.fillRect(-21, -16, 6, 8);
+      g.fillRect(15, -16, 6, 8);
       g.fillStyle = '#9aa0ad';
-      g.fillRect(-22, -6, 44, 6);
-      g.fillStyle = '#6b7280';
-      for (let i = 0; i < 6; i++) g.fillRect(-18 + i * 6, -4, 3, 2);
+      g.fillRect(-12, -13, 3, 3);
+      g.fillRect(-9, -10, 3, 3);
+      g.fillRect(-9, -16, 3, 3);
+      g.fillRect(-6, -13, 3, 3);
+      g.fillStyle = '#e2574c';
+      g.fillRect(6, -16, 3, 3);
+      g.fillStyle = '#4fb3a9';
+      g.fillRect(10, -12, 3, 3);
+    } else if (name === 'type') {
+      // laptop seen from behind — she peeks over the lid while typing,
+      // screen light flickering over the top edge
+      g.fillStyle = '#2f3542';
+      g.fillRect(-21, -28, 42, 24);
+      g.fillStyle = Math.floor(this.t * 3) % 2 ? '#9fc4e8' : '#4a5468';
+      g.fillRect(-21, -28, 42, 3);
+      g.fillStyle = '#9aa0ad';
+      g.fillRect(-3, -18, 6, 6);
     }
   }
 
@@ -692,6 +798,11 @@ export class Pet {
       tilt = ph > 0.72 ? 0.13 : 0;
     } else if (act === 'type') {
       sx *= 1 + Math.sin(this.t * 18) * 0.008;
+    } else if (act === 'dance') {
+      tilt = Math.sin(this.t * 6) * 0.14;
+      bob -= Math.abs(Math.sin(this.t * 6)) * 4;
+    } else if (act === 'game') {
+      sx *= 1 + Math.sin(this.t * 14) * 0.006;
     }
 
     const key = this.currentFrameKey();
@@ -730,7 +841,7 @@ export class Pet {
       const near = m < 400 ? 1 : 0.3;
       let ox = Math.max(-2, Math.min(2, (dx / m) * 2.4)) * near * this.facing;
       let oy = Math.max(-2, Math.min(2, (dy / m) * 2.4)) * near;
-      if (act === 'read' || act === 'type') {
+      if (act === 'read' || act === 'type' || act === 'game') {
         ox = 0;
         oy = 2.6;
       } else if (act === 'drink') {
