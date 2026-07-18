@@ -522,7 +522,6 @@ PETS.forEach(([spId, name, pal], i) => {
     buildFrames();
     document.querySelectorAll('.pet-dot').forEach((b, j) => b.classList.toggle('sel', j === i));
     galleryName.textContent = `${name} the ${SPECIES_LABEL[spId]}`;
-    document.getElementById('hero-name').textContent = name;
   });
   gallery.appendChild(btn);
 });
